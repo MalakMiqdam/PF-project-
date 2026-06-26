@@ -8,12 +8,10 @@ vector<vector<string>> readTXT(const string& filename) {
     }
 
     string line;
-    // Skip the mandatory header row
     if (!getline(file, line)) {
         return data;
     }
 
-    // Read data rows using character parsing loop (no high-level splitting)
     while (getline(file, line)) {
         vector<string> row;
         string currentField = "";
@@ -23,7 +21,7 @@ vector<vector<string>> readTXT(const string& filename) {
             char c = line[i];
 
             if (c == '"') {
-                inQuotes = !inQuotes; // Toggle quote state
+                inQuotes = !inQuotes;
             } else if (c == ',' && !inQuotes) {
                 row.push_back(currentField);
                 currentField = "";
@@ -31,7 +29,7 @@ vector<vector<string>> readTXT(const string& filename) {
                 currentField += c;
             }
         }
-        row.push_back(currentField); // Push final field of the line
+        row.push_back(currentField);
         data.push_back(row);
     }
 
@@ -43,17 +41,14 @@ void writeTXT(const string& filename, const vector<string>& header, const vector
     ofstream file(filename);
     if (!file.is_open()) return;
 
-    // Write header
     for (size_t i = 0; i < header.size(); i++) {
         file << header[i] << (i == header.size() - 1 ? "" : ",");
     }
     file << "\n";
 
-    // Write data rows with comma separation and quote handling
     for (size_t i = 0; i < data.size(); i++) {
         for (size_t j = 0; j < data[i].size(); j++) {
             string field = data[i][j];
-            // If field contains a comma, wrap it in quotes as specified
             if (field.find(',') != string::npos) {
                 file << "\"" << field << "\"";
             } else {
@@ -90,7 +85,7 @@ vector<string> findRow(const string& filename, const string& key, int colIndex) 
             return data[i];
         }
     }
-    return vector<string>(); // Return empty vector if not found
+    return vector<string>();
 }
 
 bool rowExists(const string& filename, const string& value, int colIndex) {

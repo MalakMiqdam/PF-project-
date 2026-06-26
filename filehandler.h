@@ -8,7 +8,6 @@
 
 using namespace std;
 
-// Mandated M1 Functions
 vector<vector<string>> readTXT(const string& filename);
 void writeTXT(const string& filename, const vector<string>& header, const vector<vector<string>>& data);
 void appendTXT(const string& filename, const vector<string>& row);
