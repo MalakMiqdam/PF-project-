@@ -5,24 +5,23 @@
 #include <string>
 #include <vector>
 #include "filehandler.h"
-#include "student_ops.h"
 
 using namespace std;
 
 enum EnrollResult {
-    ENROLL_SUCCESS,
-    ENROLL_STUDENT_INACTIVE,
-    ENROLL_COURSE_NOT_FOUND,
-    ENROLL_NO_SEATS,
-    ENROLL_ALREADY_ENROLLED,
-    ENROLL_CREDIT_OVERLOAD,
-    ENROLL_PREREQ_NOT_MET
+    SUCCESS,
+    STUDENT_INACTIVE,
+    COURSE_NOT_FOUND,
+    NO_SEATS,
+    ALREADY_ENROLLED,
+    MAX_CREDITS_EXCEEDED,
+    PREREQ_FAILED
 };
 
 EnrollResult enrollStudent(const string& roll, const string& courseCode, const string& semester);
-bool dropCourse(const string& roll, const string& courseCode, const string& semester);
+void dropCourse(const string& roll, const string& courseCode, const string& semester);
 int getCreditLoad(const string& roll, const string& semester);
 bool checkPrerequisite(const string& roll, const string& courseCode);
-vector<vector<string>> listEnrolledStudents(const string& courseCode);
+vector<vector<string>> listEnrolledStudents(const string& courseCode, const string& semester);
 
 #endif

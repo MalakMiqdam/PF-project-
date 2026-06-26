@@ -1,104 +1,131 @@
 #include "course_ops.h"
 
 EnrollResult enrollStudent(const string& roll, const string& courseCode, const string& semester) {
-    // Check student is active
-    vector<string> student = searchByRoll(roll);
-    if (student.empty() || student[4] != "active") return ENROLL_STUDENT_INACTIVE;
-
-    // Check course exists
-    vector<vector<string>> courses = readTXT("courses.txt");
-    vector<string> course = findRow(courses, 0, courseCode);
-    if (course.empty()) return ENROLL_COURSE_NOT_FOUND;
-
-    // Check seats
-    vector<vector<string>> enrollments = readTXT("enrollments.txt");
-    int enrolled = 0;
-    for (int i = 0; i < enrollments.size(); i++) {
-        if (enrollments[i].size() > 3 && enrollments[i][1] == courseCode && enrollments[i][3] == "enrolled")
-            enrolled++;
-    }
-    int seats = stoi(course[3]);
-    if (enrolled >= seats) return ENROLL_NO_SEATS;
-
-    // Check not already enrolled
-    for (int i = 0; i < enrollments.size(); i++) {
-        if (enrollments[i][0] == roll && enrollments[i][1] == courseCode && enrollments[i][3] == "enrolled")
-            return ENROLL_ALREADY_ENROLLED;
+    vector<string> student = findRow("students.txt", roll, 0);
+    if (student.empty() || student[4] != "active") {
+        return STUDENT_INACTIVE;
     }
 
-    // Check credit load
-    int credits = stoi(course[2]);
-    if (getCreditLoad(roll, semester) + credits > 21) return ENROLL_CREDIT_OVERLOAD;
-
-    // Check prerequisite
-    if (!checkPrerequisite(roll, courseCode)) return ENROLL_PREREQ_NOT_MET;
-
-    // Enroll
-    vector<string> row = {roll, courseCode, semester, "enrolled"};
-    appendTXT("enrollments.txt", row);
-    return ENROLL_SUCCESS;
-}
-
-bool dropCourse(const string& roll, const string& courseCode, const string& semester) {
-    // Check no attendance exists
-    vector<vector<string>> attendance = readTXT("attendance_log.txt");
-    for (int i = 0; i < attendance.size(); i++) {
-        if (attendance[i][0] == roll && attendance[i][1] == courseCode)
-            return false;
+    vector<string> course = findRow("courses.txt", courseCode, 0);
+    if (course.empty()) {
+        return COURSE_NOT_FOUND;
     }
 
-    vector<vector<string>> enrollments = readTXT("enrollments.txt");
-    bool found = false;
-    for (int i = 0; i < enrollments.size(); i++) {
-        if (enrollments[i][0] == roll && enrollments[i][1] == courseCode && enrollments[i][2] == semester) {
-            enrollments[i][3] = "dropped";
-            found = true;
+    int maxSeats = stoi(course[3]);
+    vector<vector<string>> allEnrollments = readTXT("enrollments.txt");
+    int currentEnrolledCount = 0;
+    bool alreadyEnrolled = false;
+
+    for (size_t i = 0; i < allEnrollments.size(); i++) {
+        if (allEnrollments[i][1] == courseCode && allEnrollments[i][2] == semester && allEnrollments[i][3] == "enrolled") {
+            currentEnrolledCount++;
+        }
+        if (allEnrollments[i][0] == roll && allEnrollments[i][1] == courseCode && allEnrollments[i][2] == semester && allEnrollments[i][3] == "enrolled") {
+            alreadyEnrolled = true;
         }
     }
-    if (!found) return false;
-    vector<string> header = {"roll", "course_code", "semester", "status"};
-    writeTXT("enrollments.txt", header, enrollments);
-    return true;
+
+    if (alreadyEnrolled) {
+        return ALREADY_ENROLLED;
+    }
+
+    if (currentEnrolledCount >= maxSeats) {
+        return NO_SEATS;
+    }
+
+    int currentCredits = getCreditLoad(roll, semester);
+    int courseCredits = stoi(course[2]);
+    if (currentCredits + courseCredits > 21) {
+        return MAX_CREDITS_EXCEEDED;
+    }
+
+    if (!checkPrerequisite(roll, courseCode)) {
+        return PREREQ_FAILED;
+    }
+
+    vector<string> newEnrollment = {roll, courseCode, semester, "enrolled"};
+    appendTXT("enrollments.txt", newEnrollment);
+    return SUCCESS;
+}
+
+void dropCourse(const string& roll, const string& courseCode, const string& semester) {
+    vector<vector<string>> attLog = readTXT("attendance_log.txt");
+    for (size_t i = 0; i < attLog.size(); i++) {
+        if (attLog[i][0] == roll && attLog[i][1] == courseCode) {
+            cout << "Error: Cannot drop course. Attendance records already exist.\n";
+            return;
+        }
+    }
+
+    vector<vector<string>> enrollments = readTXT("enrollments.txt");
+    bool updated = false;
+
+    for (size_t i = 0; i < enrollments.size(); i++) {
+        if (enrollments[i][0] == roll && enrollments[i][1] == courseCode && enrollments[i][2] == semester && enrollments[i][3] == "enrolled") {
+            enrollments[i][3] = "dropped";
+            updated = true;
+            break;
+        }
+    }
+
+    if (updated) {
+        vector<string> header = {"roll", "course_code", "semester", "status"};
+        writeTXT("enrollments.txt", header, enrollments);
+        cout << "Course dropped successfully.\n";
+    } else {
+        cout << "Error: Registration matching parameters not found.\n";
+    }
 }
 
 int getCreditLoad(const string& roll, const string& semester) {
     vector<vector<string>> enrollments = readTXT("enrollments.txt");
     vector<vector<string>> courses = readTXT("courses.txt");
-    int total = 0;
-    for (int i = 0; i < enrollments.size(); i++) {
+    int totalLoad = 0;
+
+    for (size_t i = 0; i < enrollments.size(); i++) {
         if (enrollments[i][0] == roll && enrollments[i][2] == semester && enrollments[i][3] == "enrolled") {
-            for (int j = 0; j < courses.size(); j++) {
-                if (courses[j][0] == enrollments[i][1]) {
-                    total += stoi(courses[j][2]);
+            string courseCode = enrollments[i][1];
+            for (size_t j = 0; j < courses.size(); j++) {
+                if (courses[j][0] == courseCode) {
+                    totalLoad += stoi(courses[j][2]);
                     break;
                 }
             }
         }
     }
-    return total;
+    return totalLoad;
 }
 
 bool checkPrerequisite(const string& roll, const string& courseCode) {
-    vector<vector<string>> courses = readTXT("courses.txt");
-    vector<string> course = findRow(courses, 0, courseCode);
+    vector<string> course = findRow("courses.txt", courseCode, 0);
     if (course.empty()) return false;
-    if (course[4] == "NONE") return true;
 
     string prereq = course[4];
+    if (prereq == "NONE") return true;
+
     vector<vector<string>> grades = readTXT("grades.txt");
-    for (int i = 0; i < grades.size(); i++) {
-        if (grades[i][0] == roll && grades[i][1] == prereq && grades[i][5] != "F")
-            return true;
+    for (size_t i = 0; i < grades.size(); i++) {
+        if (grades[i][0] == roll && grades[i][1] == prereq) {
+            string letterGrade = grades[i][3];
+            if (letterGrade != "F") {
+                return true;
+            }
+        }
     }
     return false;
 }
 
-vector<vector<string>> listEnrolledStudents(const string& courseCode) {
+vector<vector<string>> listEnrolledStudents(const string& courseCode, const string& semester) {
     vector<vector<string>> enrollments = readTXT("enrollments.txt");
-    vector<vector<string>> result;
-    for (int i = 0; i < enrollments.size(); i++) {
-        if (enrollments[i].size() > 3 && enrollments[i][1] == courseCode && enrollments[i][3] == "enrolled")
-            result.push_back(enrollments[i]);
+    vector<vector<string>> studentRows;
+
+    for (size_t i = 0; i < enrollments.size(); i++) {
+        if (enrollments[i][1] == courseCode && enrollments[i][2] == semester && enrollments[i][3] == "enrolled") {
+            vector<string> sRow = findRow("students.txt", enrollments[i][0], 0);
+            if (!sRow.empty()) {
+                studentRows.push_back(sRow);
+            }
+        }
     }
-    return result;
+    return studentRows;
 }
