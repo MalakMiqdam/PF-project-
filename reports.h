@@ -1,5 +1,5 @@
-#ifndef REPORT_H
-#define REPORT_H
+#ifndef REPORTS_H
+#define REPORTS_H
 
 #include <iostream>
 #include <string>
@@ -8,6 +8,8 @@
 #include "student_ops.h"
 #include "course_ops.h"
 #include "attendance.h"
+#include "grades.h"
+#include "fee_tracker.h"
 
 using namespace std;
 

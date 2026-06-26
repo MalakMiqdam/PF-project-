@@ -1,4 +1,4 @@
-#include "report.h"
+#include "reports.h"
 
 void generateStudentTranscript(const string& roll) {
     vector<vector<string>> students = readTXT("students.txt");
@@ -15,25 +15,36 @@ void generateStudentTranscript(const string& roll) {
         return;
     }
 
-    cout << "\n=========================================\n";
-    cout << "           STUDENT TRANSCRIPT            \n";
-    cout << "=========================================\n";
-    cout << "Roll No: " << roll << "\n";
-    cout << "Name   : " << name << "\n";
-    cout << "-----------------------------------------\n";
-    cout << "Course Code\tAttendance %\n";
-    cout << "-----------------------------------------\n";
+    cout << "\n=======================================================\n";
+    cout << "                COMPLETE STUDENT TRANSCRIPT            \n";
+    cout << "=======================================================\n";
+    cout << "Roll No : " << roll << "\n";
+    cout << "Name    : " << name << "\n";
+    cout << "-------------------------------------------------------\n";
+    cout << "Course Code\tAttendance %\tMarks\tGrade\n";
+    cout << "-------------------------------------------------------\n";
 
-    vector<vector<string>> courses = readTXT("courses.txt");
+    vector<vector<string>> regs = readTXT("registrations.txt");
+    vector<vector<string>> gradesData = readTXT("grades.txt");
     bool hasRegistrations = false;
 
-    // Read enrollment data directly from registrations.txt to find courses for this student
-    vector<vector<string>> regs = readTXT("registrations.txt");
     for (int i = 0; i < regs.size(); i++) {
         if (regs[i][0] == roll) {
             string courseCode = regs[i][1];
             double pct = getAttendancePct(roll, courseCode);
-            cout << courseCode << "\t\t" << pct << "%\n";
+            
+            // Match grades data
+            string marksStr = "N/A";
+            string gradeStr = "N/A";
+            for (int j = 0; j < gradesData.size(); j++) {
+                if (gradesData[j][0] == roll && gradesData[j][1] == courseCode) {
+                    marksStr = gradesData[j][2];
+                    gradeStr = gradesData[j][3];
+                    break;
+                }
+            }
+
+            cout << courseCode << "\t\t" << pct << "%\t\t" << marksStr << "\t" << gradeStr << "\n";
             hasRegistrations = true;
         }
     }
@@ -41,7 +52,10 @@ void generateStudentTranscript(const string& roll) {
     if (!hasRegistrations) {
         cout << "(No courses registered yet)\n";
     }
-    cout << "=========================================\n\n";
+
+    // Include the Fee Balance right at the bottom of the transcript
+    printFeeStatus(roll);
+    cout << "=======================================================\n\n";
 }
 
 void generateCourseReport(const string& courseCode) {
@@ -59,24 +73,36 @@ void generateCourseReport(const string& courseCode) {
         return;
     }
 
-    cout << "\n=========================================\n";
-    cout << "             COURSE REPORT               \n";
-    cout << "=========================================\n";
+    cout << "\n=======================================================\n";
+    cout << "                     COURSE REPORT                     \n";
+    cout << "=======================================================\n";
     cout << "Course Code: " << courseCode << "\n";
-    cout << "-----------------------------------------\n";
+    cout << "-------------------------------------------------------\n";
 
     vector<vector<string>> enrolled = listEnrolledStudents(courseCode);
     cout << "Total Enrolled Students: " << enrolled.size() << "\n\n";
     
-    cout << "Roll No\t\tAttendance %\n";
-    cout << "-----------------------------------------\n";
+    cout << "Roll No\t\tAttendance %\tMarks\tGrade\n";
+    cout << "-------------------------------------------------------\n";
+    vector<vector<string>> gradesData = readTXT("grades.txt");
+
     for (int i = 0; i < enrolled.size(); i++) {
         string roll = enrolled[i][0];
         double pct = getAttendancePct(roll, courseCode);
-        cout << roll << "\t\t" << pct << "%\n";
+        
+        string marksStr = "N/A";
+        string gradeStr = "N/A";
+        for (int j = 0; j < gradesData.size(); j++) {
+            if (gradesData[j][0] == roll && gradesData[j][1] == courseCode) {
+                marksStr = gradesData[j][2];
+                gradeStr = gradesData[j][3];
+                break;
+            }
+        }
+        cout << roll << "\t\t" << pct << "%\t\t" << marksStr << "\t" << gradeStr << "\n";
     }
 
-    cout << "\n--- Students with Shortage (< 75%) ---\n";
+    cout << "\n--- Students with Attendance Shortage (< 75%) ---\n";
     vector<vector<string>> shortage = getShortageList(courseCode);
     if (shortage.empty()) {
         cout << "None! All students have clear attendance.\n";
@@ -85,5 +111,5 @@ void generateCourseReport(const string& courseCode) {
             cout << shortage[i][0] << " (" << shortage[i][2] << "%)\n";
         }
     }
-    cout << "=========================================\n\n";
+    cout << "=======================================================\n\n";
 }
