@@ -9,276 +9,284 @@
 
 using namespace std;
 
-void showMenu() {
-    cout << "=========================================\n";
-    cout << "      STUDENT ATTENDANCE & ERP SYSTEM    \n";
-    cout << "=========================================\n";
-    cout << "1. Manage Students\n";
-    cout << "2. Manage Courses & Enrollments\n";
-    cout << "3. Attendance Management\n";
-    cout << "4. Grades Management\n";
-    cout << "5. Fee & Financial Tracker\n";
-    cout << "6. Reporting & Transcripts System\n";
-    cout << "7. Exit\n";
-    cout << "=========================================\n";
-    cout << "Enter your choice: ";
-}
-
-void studentSubMenu() {
+void studentMenu() {
     while (true) {
-        cout << "\n--- Student Management Sub-Menu ---\n";
+        cout << "\n--- Student Management ---\n";
         cout << "1. Add Student\n";
-        cout << "2. Search Student by Roll Number\n";
-        cout << "3. Search Students by Name\n";
+        cout << "2. Search by Roll Number\n";
+        cout << "3. Search by Name Content\n";
         cout << "4. Update Student Details\n";
-        cout << "5. Delete Student (Soft Delete)\n";
-        cout << "6. Back to Main Menu\n";
+        cout << "5. Soft Delete Student\n";
+        cout << "6. Interactive Search-as-you-type\n";
+        cout << "7. Return to Main Menu\n";
         cout << "Enter choice: ";
         int choice;
         cin >> choice;
 
-        if (choice == 6) break;
+        if (choice == 7) break;
 
         string roll, name, dept;
+        double cgpa;
+
         switch (choice) {
             case 1:
-                cout << "Enter Roll No: "; cin >> roll;
+                cout << "Enter Roll No (BSAI-YY-XXX): "; cin >> roll;
                 cout << "Enter Name: "; cin.ignore(); getline(cin, name);
                 cout << "Enter Department: "; getline(cin, dept);
-                addStudent(roll, name, dept);
+                cout << "Enter CGPA: "; cin >> cgpa;
+                addStudent(roll, name, dept, cgpa);
                 break;
             case 2:
                 cout << "Enter Roll No: "; cin >> roll;
                 searchByRoll(roll);
                 break;
             case 3:
-                cout << "Enter Name to search: "; cin.ignore(); getline(cin, name);
+                cout << "Enter Name substring: "; cin.ignore(); getline(cin, name);
                 searchByName(name);
                 break;
             case 4:
                 cout << "Enter Roll No to update: "; cin >> roll;
                 cout << "Enter New Name: "; cin.ignore(); getline(cin, name);
                 cout << "Enter New Department: "; getline(cin, dept);
-                updateStudent(roll, name, dept);
+                cout << "Enter New CGPA: "; cin >> cgpa;
+                updateStudent(roll, name, dept, cgpa);
                 break;
             case 5:
                 cout << "Enter Roll No to delete: "; cin >> roll;
-                softDeleteStudent(roll);
+                softDelete(roll);
+                break;
+            case 6:
+                searchAsYouType();
                 break;
             default:
-                cout << "Invalid choice!\n";
+                cout << "Invalid entry.\n";
         }
     }
 }
 
-void courseSubMenu() {
+void courseMenu() {
     while (true) {
-        cout << "\n--- Course & Enrollment Sub-Menu ---\n";
+        cout << "\n--- Course & Enrollments ---\n";
         cout << "1. Enroll Student in Course\n";
         cout << "2. Drop Student from Course\n";
-        cout << "3. View Course Enrolled Students\n";
-        cout << "4. Check Student Credit Load\n";
-        cout << "5. Back to Main Menu\n";
+        cout << "3. View Course Roster\n";
+        cout << "4. Return to Main Menu\n";
+        cout << "Enter choice: ";
+        int choice;
+        cin >> choice;
+
+        if (choice == 4) break;
+
+        string roll, courseCode, semester;
+        switch (choice) {
+            case 1:
+                cout << "Enter Roll No: "; cin >> roll;
+                cout << "Enter Course Code: "; cin >> courseCode;
+                cout << "Enter Semester: "; cin >> semester;
+                {
+                    EnrollResult res = enrollStudent(roll, courseCode, semester);
+                    if (res == SUCCESS) cout << "Enrolled successfully.\n";
+                    else if (res == STUDENT_INACTIVE) cout << "Error: Student profile is inactive.\n";
+                    else if (res == COURSE_NOT_FOUND) cout << "Error: Course code does not exist.\n";
+                    else if (res == NO_SEATS) cout << "Error: No available seats.\n";
+                    else if (res == ALREADY_ENROLLED) cout << "Error: Already registered.\n";
+                    else if (res == MAX_CREDITS_EXCEEDED) cout << "Error: Registration exceeds credit limit.\n";
+                    else if (res == PREREQ_FAILED) cout << "Error: Failed course prerequisite rules.\n";
+                }
+                break;
+            case 2:
+                cout << "Enter Roll No: "; cin >> roll;
+                cout << "Enter Course Code: "; cin >> courseCode;
+                cout << "Enter Semester: "; cin >> semester;
+                dropCourse(roll, courseCode, semester);
+                break;
+            case 3:
+                cout << "Enter Course Code: "; cin >> courseCode;
+                cout << "Enter Semester: "; cin >> semester;
+                {
+                    vector<vector<string>> roster = listEnrolledStudents(courseCode, semester);
+                    cout << "\n--- Registered Students ---\n";
+                    for (size_t i = 0; i < roster.size(); i++) {
+                        cout << roster[i][0] << "\t" << roster[i][1] << "\n";
+                    }
+                }
+                break;
+            default:
+                cout << "Invalid entry.\n";
+        }
+    }
+}
+
+void attendanceMenu() {
+    while (true) {
+        cout << "\n--- Attendance Records ---\n";
+        cout << "1. Log New Session Attendance\n";
+        cout << "2. Print Daily Sheet Logs\n";
+        cout << "3. Rollback Session Logs\n";
+        cout << "4. Return to Main Menu\n";
+        cout << "Enter choice: ";
+        int choice;
+        cin >> choice;
+
+        if (choice == 4) break;
+
+        string courseCode, semester, date;
+        switch (choice) {
+            case 1:
+                cout << "Enter Course Code: "; cin >> courseCode;
+                cout << "Enter Semester: "; cin >> semester;
+                cout << "Enter Date (DD-MM-YYYY): "; cin >> date;
+                markAttendance(courseCode, semester, date);
+                break;
+            case 2:
+                cout << "Enter Course Code: "; cin >> courseCode;
+                cout << "Enter Semester: "; cin >> semester;
+                cout << "Enter Date (DD-MM-YYYY): "; cin >> date;
+                printDailySheet(courseCode, semester, date);
+                break;
+            case 3:
+                cout << "Enter Course Code: "; cin >> courseCode;
+                cout << "Enter Semester: "; cin >> semester;
+                cout << "Enter Date (DD-MM-YYYY): "; cin >> date;
+                if (undoLastSession(courseCode, semester, date)) {
+                    cout << "Session logs rolled back.\n";
+                } else {
+                    cout << "No matching session logs located.\n";
+                }
+                break;
+            default:
+                cout << "Invalid entry.\n";
+        }
+    }
+}
+
+void gradesMenu() {
+    while (true) {
+        cout << "\n--- Performance & Grading ---\n";
+        cout << "1. Enter Student Evaluation Marks\n";
+        cout << "2. Return to Main Menu\n";
+        cout << "Enter choice: ";
+        int choice;
+        cin >> choice;
+
+        if (choice == 2) break;
+
+        string roll, courseCode, semester;
+        switch (choice) {
+            case 1:
+                cout << "Enter Roll No: "; cin >> roll;
+                cout << "Enter Course Code: "; cin >> courseCode;
+                cout << "Enter Semester: "; cin >> semester;
+                enterMarks(roll, courseCode, semester);
+                break;
+            default:
+                cout << "Invalid entry.\n";
+        }
+    }
+}
+
+void feeMenu() {
+    while (true) {
+        cout << "\n--- Financial Records ---\n";
+        cout << "1. Issue New Base Challan\n";
+        cout << "2. Process Accounts Payment\n";
+        cout << "3. Return to Main Menu\n";
+        cout << "Enter choice: ";
+        int choice;
+        cin >> choice;
+
+        if (choice == 3) break;
+
+        string roll, date, dueDate;
+        double amount;
+        switch (choice) {
+            case 1:
+                cout << "Enter Roll No: "; cin >> roll;
+                cout << "Enter Base Amount: "; cin >> amount;
+                cout << "Enter Due Date (DD-MM-YYYY): "; cin >> dueDate;
+                recordChallan(roll, amount, dueDate);
+                break;
+            case 2:
+                cout << "Enter Roll No: "; cin >> roll;
+                cout << "Enter Amount Paid: "; cin >> amount;
+                cout << "Enter Payment Date (DD-MM-YYYY): "; cin >> date;
+                processPayment(roll, amount, date);
+                break;
+            default:
+                cout << "Invalid entry.\n";
+        }
+    }
+}
+
+void analyticsMenu() {
+    while (true) {
+        cout << "\n--- System Reports & Analytics ---\n";
+        cout << "1. Generate Student Transcript\n";
+        cout << "2. View Course Attendance Defaulters\n";
+        cout << "3. View Sorted Financial Defaulters\n";
+        cout << "4. Display Department Base Matrices\n";
+        cout << "5. Return to Main Menu\n";
         cout << "Enter choice: ";
         int choice;
         cin >> choice;
 
         if (choice == 5) break;
 
-        string roll, courseCode;
-        switch (choice) {
-            case 1:
-                cout << "Enter Student Roll No: "; cin >> roll;
-                cout << "Enter Course Code: "; cin >> courseCode;
-                enrollStudent(roll, courseCode);
-                break;
-            case 2:
-                cout << "Enter Student Roll No: "; cin >> roll;
-                cout << "Enter Course Code: "; cin >> courseCode;
-                dropCourse(roll, courseCode);
-                break;
-            case 3:
-                cout << "Enter Course Code: "; cin >> courseCode;
-                {
-                    vector<vector<string>> enrolled = listEnrolledStudents(courseCode);
-                    if(!enrolled.empty()) {
-                        cout << "\nEnrolled Students:\nRoll No\n---------\n";
-                        for(int i=0; i<enrolled.size(); i++) {
-                            cout << enrolled[i][0] << "\n";
-                        }
-                    }
-                }
-                break;
-            case 4:
-                cout << "Enter Student Roll No: "; cin >> roll;
-                cout << "Current Credit Load: " << getCreditLoad(roll) << " credits\n";
-                break;
-            default:
-                cout << "Invalid choice!\n";
-        }
-    }
-}
-
-void attendanceSubMenu() {
-    while (true) {
-        cout << "\n--- Attendance Management Sub-Menu ---\n";
-        cout << "1. Mark Attendance for a Class\n";
-        cout << "2. View Daily Attendance Sheet\n";
-        cout << "3. Undo Last Attendance Session\n";
-        cout << "4. Back to Main Menu\n";
-        cout << "Enter choice: ";
-        int choice;
-        cin >> choice;
-
-        if (choice == 4) break;
-
-        string courseCode, date;
-        switch (choice) {
-            case 1:
-                cout << "Enter Course Code: "; cin >> courseCode;
-                cout << "Enter Date (DD-MM-YYYY): "; cin >> date;
-                markAttendance(courseCode, date);
-                break;
-            case 2:
-                cout << "Enter Course Code: "; cin >> courseCode;
-                cout << "Enter Date (DD-MM-YYYY): "; cin >> date;
-                printDailySheet(courseCode, date);
-                break;
-            case 3:
-                cout << "Enter Course Code (for confirmation): "; cin >> courseCode;
-                undoLastSession(courseCode);
-                break;
-            default:
-                cout << "Invalid choice!\n";
-        }
-    }
-}
-
-void gradesSubMenu() {
-    while (true) {
-        cout << "\n--- Grades Management Sub-Menu ---\n";
-        cout << "1. Assign / Update Grade for Student\n";
-        cout << "2. View Grades Breakdown for a Course\n";
-        cout << "3. Back to Main Menu\n";
-        cout << "Enter choice: ";
-        int choice;
-        cin >> choice;
-
-        if (choice == 3) break;
-
-        string roll, courseCode;
-        double marks;
-
-        switch (choice) {
-            case 1:
-                cout << "Enter Student Roll No: "; cin >> roll;
-                cout << "Enter Course Code: "; cin >> courseCode;
-                cout << "Enter Marks Obtained: "; cin >> marks;
-                assignGrade(roll, courseCode, marks);
-                break;
-            case 2:
-                cout << "Enter Course Code: "; cin >> courseCode;
-                {
-                    vector<vector<string>> data = getClassGrades(courseCode);
-                    cout << "\n--- Grades for Course " << courseCode << " ---\n";
-                    cout << "Roll No\t\tMarks\tGrade\n";
-                    cout << "------------------------------------\n";
-                    for (int i = 0; i < data.size(); i++) {
-                        cout << data[i][0] << "\t\t" << data[i][2] << "\t" << data[i][3] << "\n";
-                    }
-                }
-                break;
-            default:
-                cout << "Invalid choice!\n";
-        }
-    }
-}
-
-void feeSubMenu() {
-    while (true) {
-        cout << "\n--- Fee & Financial Tracker Sub-Menu ---\n";
-        cout << "1. Record New Fee Challan\n";
-        cout << "2. Process Student Fee Payment\n";
-        cout << "3. Check Individual Financial Status\n";
-        cout << "4. Back to Main Menu\n";
-        cout << "Enter choice: ";
-        int choice;
-        cin >> choice;
-
-        if (choice == 4) break;
-
-        string roll, dueDate;
-        double amount;
-
-        switch (choice) {
-            case 1:
-                cout << "Enter Student Roll No: "; cin >> roll;
-                cout << "Enter Challan Amount: "; cin >> amount;
-                cout << "Enter Due Date (DD-MM-YYYY): "; cin >> dueDate;
-                recordChallan(roll, amount, dueDate);
-                break;
-            case 2:
-                cout << "Enter Student Roll No: "; cin >> roll;
-                cout << "Enter Amount Paid: "; cin >> amount;
-                payFee(roll, amount);
-                break;
-            case 3:
-                cout << "Enter Student Roll No: "; cin >> roll;
-                printFeeStatus(roll);
-                break;
-            default:
-                cout << "Invalid choice!\n";
-        }
-    }
-}
-
-void reportSubMenu() {
-    while (true) {
-        cout << "\n--- Reporting & Transcripts Sub-Menu ---\n";
-        cout << "1. Generate Complete Student Transcript\n";
-        cout << "2. Generate Course Statistics Report\n";
-        cout << "3. Back to Main Menu\n";
-        cout << "Enter choice: ";
-        int choice;
-        cin >> choice;
-
-        if (choice == 3) break;
-
-        string target;
+        string target, semester;
         switch (choice) {
             case 1:
                 cout << "Enter Student Roll No: "; cin >> target;
-                generateStudentTranscript(target);
+                cout << "Enter Semester: "; cin >> semester;
+                printStudentTranscript(target, semester);
                 break;
             case 2:
                 cout << "Enter Course Code: "; cin >> target;
-                generateCourseReport(target);
+                cout << "Enter Semester: "; cin >> semester;
+                printAttendanceDefaulters(target, semester);
+                break;
+            case 3:
+                printFeeDefaulters();
+                break;
+            case 4:
+                printDepartmentSummary();
                 break;
             default:
-                cout << "Invalid choice!\n";
+                cout << "Invalid entry.\n";
         }
     }
 }
 
 int main() {
     while (true) {
-        showMenu();
-        int mainChoice;
-        cin >> mainChoice;
+        cout << "\n=========================================\n";
+        cout << "         CAMPUS ANALYTICS ENGINE         \n";
+        cout << "=========================================\n";
+        cout << "1. Student Management\n";
+        cout << "2. Course Registration\n";
+        cout << "3. Attendance Systems\n";
+        cout << "4. Evaluation Grading\n";
+        cout << "5. Financial Tracking\n";
+        cout << "6. Engine Reports Summary\n";
+        cout << "7. Terminate System Application\n";
+        cout << "=========================================\n";
+        cout << "Enter primary menu selection: ";
+        
+        int selection;
+        cin >> selection;
 
-        if (mainChoice == 7) {
-            cout << "Exiting ERP system. Goodbye!\n";
+        if (selection == 7) {
+            cout << "Closing system application execution connection. System terminated.\n";
             break;
         }
 
-        switch (mainChoice) {
-            case 1: studentSubMenu(); break;
-            case 2: courseSubMenu(); break;
-            case 3: attendanceSubMenu(); break;
-            case 4: gradesSubMenu(); break;
-            case 5: feeSubMenu(); break;
-            case 6: reportSubMenu(); break;
-            default: cout << "Invalid Selection. Please try again.\n";
+        switch (selection) {
+            case 1: studentMenu(); break;
+            case 2: courseMenu(); break;
+            case 3: attendanceMenu(); break;
+            case 4: gradesMenu(); break;
+            case 5: feeMenu(); break;
+            case 6: analyticsMenu(); break;
+            default: cout << "Selection index not found. Try again.\n";
         }
     }
     return 0;
