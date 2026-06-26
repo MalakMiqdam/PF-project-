@@ -8,14 +8,12 @@
 
 using namespace std;
 
-bool isValidRoll(const string& roll);
-bool isValidName(const string& name);
-bool isValidCGPA(const string& cgpa);
-void addStudent(const string& roll, const string& name, const string& dept, const string& cgpa);
-vector<string> searchByRoll(const string& roll);
-vector<vector<string>> searchByName(const string& name);
-void updateStudent(const string& roll, int fieldIndex, const string& newValue);
+void addStudent(const string& roll, const string& name, const string& dept, double cgpa);
+void searchByRoll(const string& roll);
+void searchByName(const string& name);
+void updateStudent(const string& roll, const string& name, const string& dept, double cgpa);
 void softDelete(const string& roll);
 vector<vector<string>> listActiveStudents();
+void searchAsYouType();
 
 #endif
