@@ -9,8 +9,10 @@
 
 using namespace std;
 
-void recordChallan(const string& roll, double amount, const string& dueDate);
-void payFee(const string& roll, double amountPaid);
-void printFeeStatus(const string& roll);
+void recordChallan(const string& roll, double baseAmount, const string& dueDate);
+void processPayment(const string& roll, double amountPaid, const string& paymentDate);
+int daysBetween(const string& date1, const string& date2);
+bool parseDate(const string& dateStr, int& d, int& m, int& y);
+vector<vector<string>> getDefaulters();
 
 #endif

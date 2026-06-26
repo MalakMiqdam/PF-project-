@@ -1,83 +1,126 @@
 #include "fee_tracker.h"
 
-void recordChallan(const string& roll, double amount, const string& dueDate) {
-    // Check if student exists
-    vector<vector<string>> students = readTXT("students.txt");
-    bool exists = false;
-    for (int i = 0; i < students.size(); i++) {
-        if (students[i][0] == roll) {
-            exists = true;
-            break;
-        }
+bool parseDate(const string& dateStr, int& d, int& m, int& y) {
+    if (dateStr.length() != 10 || dateStr[2] != '-' || dateStr[5] != '-') {
+        return false;
+    }
+    d = stoi(dateStr.substr(0, 2));
+    m = stoi(dateStr.substr(3, 2));
+    y = stoi(dateStr.substr(6, 4));
+    return true;
+}
+
+int daysBetween(const string& date1, const string& date2) {
+    int d1, m1, y1;
+    int d2, m2, y2;
+    if (!parseDate(date1, d1, m1, y1) || !parseDate(date2, d2, m2, y2)) {
+        return 0;
     }
 
-    if (!exists) {
-        cout << "Error: Student with Roll Number " << roll << " does not exist.\n";
+    int months[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+
+    long long totalDays1 = d1;
+    for (int i = 0; i < m1 - 1; i++) {
+        totalDays1 += months[i];
+    }
+    totalDays1 += y1 * 365LL;
+
+    long long totalDays2 = d2;
+    for (int i = 0; i < m2 - 1; i++) {
+        totalDays2 += months[i];
+    }
+    totalDays2 += y2 * 365LL;
+
+    return static_cast<int>(totalDays2 - totalDays1);
+}
+
+void recordChallan(const string& roll, double baseAmount, const string& dueDate) {
+    vector<string> student = findRow("students.txt", roll, 0);
+    if (student.empty() || student[4] != "active") {
+        cout << "Error: No active student found with this roll number.\n";
         return;
     }
 
-    // Check if a fee record already exists to append/update balance
-    vector<vector<string>> feesData = readTXT("fees.txt");
+    vector<vector<string>> feeData = readTXT("fees.txt");
     bool updated = false;
 
-    for (int i = 0; i < feesData.size(); i++) {
-        if (feesData[i][0] == roll) {
-            double currentTotal = stod(feesData[i][1]);
-            feesData[i][1] = to_string(currentTotal + amount);
-            feesData[i][3] = dueDate;
+    for (size_t i = 0; i < feeData.size(); i++) {
+        if (feeData[i][0] == roll) {
+            feeData[i][1] = to_string(stod(feeData[i][1]) + baseAmount);
+            feeData[i][4] = dueDate;
             updated = true;
             break;
         }
     }
 
     if (updated) {
-        vector<string> header = {"roll", "total_due", "amount_paid", "due_date"};
-        writeTXT("fees.txt", header, feesData);
+        vector<string> header = {"roll", "total_due", "amount_paid", "late_penalty", "due_date"};
+        writeTXT("fees.txt", header, feeData);
     } else {
-        vector<string> row = {roll, to_string(amount), "0.000000", dueDate};
+        vector<string> row = {roll, to_string(baseAmount), "0.000000", "0.000000", dueDate};
         appendTXT("fees.txt", row);
     }
-    cout << "Fee challan of " << amount << " recorded for " << roll << ".\n";
+    cout << "Challan registered successfully.\n";
 }
 
-void payFee(const string& roll, double amountPaid) {
-    vector<vector<string>> feesData = readTXT("fees.txt");
+void processPayment(const string& roll, double amountPaid, const string& paymentDate) {
+    vector<vector<string>> feeData = readTXT("fees.txt");
     bool found = false;
 
-    for (int i = 0; i < feesData.size(); i++) {
-        if (feesData[i][0] == roll) {
-            double currentPaid = stod(feesData[i][2]);
-            feesData[i][2] = to_string(currentPaid + amountPaid);
+    for (size_t i = 0; i < feeData.size(); i++) {
+        if (feeData[i][0] == roll) {
+            string dueDate = feeData[i][4];
+            double penalty = 0.0;
+
+            int diff = daysBetween(dueDate, paymentDate);
+            if (diff > 0) {
+                penalty = diff * 50.0;
+            }
+
+            double totalDue = stod(feeData[i][1]) + penalty;
+            double currentPaid = stod(feeData[i][2]) + amountPaid;
+
+            feeData[i][1] = to_string(totalDue);
+            feeData[i][2] = to_string(currentPaid);
+            feeData[i][3] = to_string(stod(feeData[i][3]) + penalty);
             found = true;
             break;
         }
     }
 
     if (found) {
-        vector<string> header = {"roll", "total_due", "amount_paid", "due_date"};
-        writeTXT("fees.txt", header, feesData);
-        cout << "Payment of " << amountPaid << " successfully processed for " << roll << ".\n";
+        vector<string> header = {"roll", "total_due", "amount_paid", "late_penalty", "due_date"};
+        writeTXT("fees.txt", header, feeData);
+        cout << "Payment registered successfully.\n";
     } else {
-        cout << "No fee record found for student " << roll << ". Generate a challan first.\n";
+        cout << "Error: Financial statement not found for this account.\n";
     }
 }
 
-void printFeeStatus(const string& roll) {
-    vector<vector<string>> feesData = readTXT("fees.txt");
-    for (int i = 0; i < feesData.size(); i++) {
-        if (feesData[i][0] == roll) {
-            double total = stod(feesData[i][1]);
-            double paid = stod(feesData[i][2]);
-            double balance = total - paid;
-            
-            cout << "\n--- Fee Status for " << roll << " ---\n";
-            cout << "Total Due   : " << total << "\n";
-            cout << "Amount Paid : " << paid << "\n";
-            cout << "Outstanding : " << balance << "\n";
-            cout << "Due Date    : " << feesData[i][3] << "\n";
-            cout << "--------------------------------\n";
-            return;
+vector<vector<string>> getDefaulters() {
+    vector<vector<string>> feeData = readTXT("fees.txt");
+    vector<vector<string>> defaulters;
+
+    for (size_t i = 0; i < feeData.size(); i++) {
+        double due = stod(feeData[i][1]);
+        double paid = stod(feeData[i][2]);
+        double balance = due - paid;
+        if (balance > 0.0) {
+            vector<string> row = {feeData[i][0], to_string(balance), feeData[i][4]};
+            defaulters.push_back(row);
         }
     }
-    cout << "No active financial records found for Roll Number " << roll << ".\n";
+
+    if (!defaulters.empty()) {
+        for (size_t i = 0; i < defaulters.size() - 1; i++) {
+            for (size_t j = 0; j < defaulters.size() - i - 1; j++) {
+                if (stod(defaulters[j][1]) < stod(defaulters[j + 1][1])) {
+                    vector<string> temp = defaulters[j];
+                    defaulters[j] = defaulters[j + 1];
+                    defaulters[j + 1] = temp;
+                }
+            }
+        }
+    }
+    return defaulters;
 }
