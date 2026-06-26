@@ -1,115 +1,119 @@
 #include "reports.h"
 
-void generateStudentTranscript(const string& roll) {
-    vector<vector<string>> students = readTXT("students.txt");
-    string name = "";
-    for (int i = 0; i < students.size(); i++) {
-        if (students[i][0] == roll) {
-            name = students[i][1];
-            break;
-        }
-    }
-
-    if (name == "") {
-        cout << "Student with Roll Number " << roll << " not found.\n";
+void printStudentTranscript(const string& roll, const string& semester) {
+    vector<string> student = findRow("students.txt", roll, 0);
+    if (student.empty() || student[4] != "active") {
+        cout << "Error: No active student found with this roll number.\n";
         return;
     }
 
-    cout << "\n=======================================================\n";
-    cout << "                COMPLETE STUDENT TRANSCRIPT            \n";
-    cout << "=======================================================\n";
-    cout << "Roll No : " << roll << "\n";
-    cout << "Name    : " << name << "\n";
-    cout << "-------------------------------------------------------\n";
-    cout << "Course Code\tAttendance %\tMarks\tGrade\n";
-    cout << "-------------------------------------------------------\n";
+    cout << "\n=========================================\n";
+    cout << "           STUDENT TRANSCRIPT            \n";
+    cout << "=========================================\n";
+    cout << "Roll No   : " << student[0] << "\n";
+    cout << "Name      : " << student[1] << "\n";
+    cout << "Dept      : " << student[2] << "\n";
+    cout << "Semester  : " << semester << "\n";
+    cout << "-----------------------------------------\n";
+    cout << "Course\t\tAttendance\tMarks\tGrade\n";
+    cout << "-----------------------------------------\n";
 
-    vector<vector<string>> regs = readTXT("registrations.txt");
-    vector<vector<string>> gradesData = readTXT("grades.txt");
-    bool hasRegistrations = false;
+    vector<vector<string>> enrollments = readTXT("enrollments.txt");
+    vector<vector<string>> grades = readTXT("grades.txt");
+    bool registered = false;
 
-    for (int i = 0; i < regs.size(); i++) {
-        if (regs[i][0] == roll) {
-            string courseCode = regs[i][1];
-            double pct = getAttendancePct(roll, courseCode);
+    for (size_t i = 0; i < enrollments.size(); i++) {
+        if (enrollments[i][0] == roll && enrollments[i][2] == semester && enrollments[i][3] == "enrolled") {
+            string cCode = enrollments[i][1];
+            double attPct = getAttendancePct(roll, cCode, semester);
             
-            // Match grades data
             string marksStr = "N/A";
             string gradeStr = "N/A";
-            for (int j = 0; j < gradesData.size(); j++) {
-                if (gradesData[j][0] == roll && gradesData[j][1] == courseCode) {
-                    marksStr = gradesData[j][2];
-                    gradeStr = gradesData[j][3];
+            
+            for (size_t j = 0; j < grades.size(); j++) {
+                if (grades[j][0] == roll && grades[j][1] == cCode && grades[j][2] == semester) {
+                    marksStr = grades[j][3];
+                    gradeStr = grades[j][4];
                     break;
                 }
             }
-
-            cout << courseCode << "\t\t" << pct << "%\t\t" << marksStr << "\t" << gradeStr << "\n";
-            hasRegistrations = true;
+            cout << cCode << "\t\t" << attPct << "%\t\t" << marksStr << "\t" << gradeStr << "\n";
+            registered = true;
         }
     }
 
-    if (!hasRegistrations) {
-        cout << "(No courses registered yet)\n";
+    if (!registered) {
+        cout << "No courses registered for this semester.\n";
     }
-
-    // Include the Fee Balance right at the bottom of the transcript
-    printFeeStatus(roll);
-    cout << "=======================================================\n\n";
+    cout << "=========================================\n\n";
 }
 
-void generateCourseReport(const string& courseCode) {
-    vector<vector<string>> courses = readTXT("courses.txt");
-    bool courseExists = false;
-    for (int i = 0; i < courses.size(); i++) {
-        if (courses[i][0] == courseCode) {
-            courseExists = true;
-            break;
+void printAttendanceDefaulters(const string& courseCode, const string& semester) {
+    vector<vector<string>> shortage = getShortageList(courseCode, semester);
+    cout << "\n--- Attendance Defaulters (< 75%) ---\n";
+    cout << "Course: " << courseCode << " | Semester: " << semester << "\n";
+    cout << "Roll No\t\tAttendance Percentage\n";
+    cout << "-------------------------------------\n";
+    
+    if (shortage.empty()) {
+        cout << "No attendance defaulters found for this course configuration.\n";
+    } else {
+        for (size_t i = 0; i < shortage.size(); i++) {
+            cout << shortage[i][0] << "\t\t" << shortage[i][2] << "%\n";
         }
     }
+    cout << "-------------------------------------\n\n";
+}
 
-    if (!courseExists) {
-        cout << "Course with Code " << courseCode << " not found.\n";
-        return;
-    }
-
-    cout << "\n=======================================================\n";
-    cout << "                     COURSE REPORT                     \n";
-    cout << "=======================================================\n";
-    cout << "Course Code: " << courseCode << "\n";
-    cout << "-------------------------------------------------------\n";
-
-    vector<vector<string>> enrolled = listEnrolledStudents(courseCode);
-    cout << "Total Enrolled Students: " << enrolled.size() << "\n\n";
+void printFeeDefaulters() {
+    vector<vector<string>> defaulters = getDefaulters();
+    cout << "\n--- Outstanding Fee Defaulters Roster ---\n";
+    cout << "Roll No\t\tPending Balance\tDeadline\n";
+    cout << "-----------------------------------------\n";
     
-    cout << "Roll No\t\tAttendance %\tMarks\tGrade\n";
-    cout << "-------------------------------------------------------\n";
-    vector<vector<string>> gradesData = readTXT("grades.txt");
+    if (defaulters.empty()) {
+        cout << "No active accounts show pending arrears.\n";
+    } else {
+        for (size_t i = 0; i < defaulters.size(); i++) {
+            cout << defaulters[i][0] << "\t\t" << defaulters[i][1] << "\t" << defaulters[i][2] << "\n";
+        }
+    }
+    cout << "-----------------------------------------\n\n";
+}
 
-    for (int i = 0; i < enrolled.size(); i++) {
-        string roll = enrolled[i][0];
-        double pct = getAttendancePct(roll, courseCode);
-        
-        string marksStr = "N/A";
-        string gradeStr = "N/A";
-        for (int j = 0; j < gradesData.size(); j++) {
-            if (gradesData[j][0] == roll && gradesData[j][1] == courseCode) {
-                marksStr = gradesData[j][2];
-                gradeStr = gradesData[j][3];
-                break;
+void printDepartmentSummary() {
+    vector<vector<string>> students = readTXT("students.txt");
+    
+    vector<string> depts;
+    vector<int> counts;
+
+    for (size_t i = 0; i < students.size(); i++) {
+        if (students[i][4] == "active") {
+            string dName = students[i][2];
+            bool found = false;
+            for (size_t j = 0; j < depts.size(); j++) {
+                if (depts[j] == dName) {
+                    counts[j]++;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                depts.push_back(dName);
+                counts.push_back(1);
             }
         }
-        cout << roll << "\t\t" << pct << "%\t\t" << marksStr << "\t" << gradeStr << "\n";
     }
 
-    cout << "\n--- Students with Attendance Shortage (< 75%) ---\n";
-    vector<vector<string>> shortage = getShortageList(courseCode);
-    if (shortage.empty()) {
-        cout << "None! All students have clear attendance.\n";
+    cout << "\n--- Department Enrollment Statistics Summary ---\n";
+    cout << "Department\tActive Student Base\n";
+    cout << "------------------------------------------------\n";
+    if (depts.empty()) {
+        cout << "No active system entries currently recorded.\n";
     } else {
-        for (int i = 0; i < shortage.size(); i++) {
-            cout << shortage[i][0] << " (" << shortage[i][2] << "%)\n";
+        for (size_t i = 0; i < depts.size(); i++) {
+            cout << depts[i] << "\t\t" << counts[i] << "\n";
         }
     }
-    cout << "=======================================================\n\n";
+    cout << "------------------------------------------------\n\n";
 }

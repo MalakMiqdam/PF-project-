@@ -13,7 +13,9 @@
 
 using namespace std;
 
-void generateStudentTranscript(const string& roll);
-void generateCourseReport(const string& courseCode);
+void printStudentTranscript(const string& roll, const string& semester);
+void printAttendanceDefaulters(const string& courseCode, const string& semester);
+void printFeeDefaulters();
+void printDepartmentSummary();
 
 #endif
