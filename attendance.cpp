@@ -1,74 +1,106 @@
 #include "attendance.h"
 
-static vector<vector<string>> attendanceBackup;
+void markAttendance(const string& courseCode, const string& semester, const string& date) {
+    vector<vector<string>> enrolled = listEnrolledStudents(courseCode, semester);
+    if (enrolled.empty()) {
+        cout << "No students enrolled in this course for this semester.\n";
+        return;
+    }
 
-void markAttendance(const string& courseCode, const string& date) {
-    vector<vector<string>> enrolled = listEnrolledStudents(courseCode);
-    if (enrolled.empty()) { cout << "No students enrolled in this course.\n"; return; }
+    vector<vector<string>> data = readTXT("attendance_log.txt");
+    for (size_t i = 0; i < data.size(); i++) {
+        if (data[i][1] == courseCode && data[i][2] == semester && data[i][3] == date) {
+            cout << "Error: Attendance for this date has already been marked.\n";
+            return;
+        }
+    }
 
-    // Save backup before writing
-    attendanceBackup = readTXT("attendance_log.txt");
-
-    for (int i = 0; i < enrolled.size(); i++) {
+    for (size_t i = 0; i < enrolled.size(); i++) {
         string roll = enrolled[i][0];
         cout << "Mark attendance for " << roll << " (P/A/L): ";
         string status;
         cin >> status;
-        if (status != "P" && status != "A" && status != "L") {
-            cout << "Invalid input, marking as A.\n";
-            status = "A";
+        while (status != "P" && status != "A" && status != "L") {
+            cout << "Invalid input. Enter P, A, or L: ";
+            cin >> status;
         }
-        vector<string> row = {roll, courseCode, date, status};
+        vector<string> row = {roll, courseCode, semester, date, status};
         appendTXT("attendance_log.txt", row);
     }
-    cout << "Attendance marked for " << date << "\n";
+    cout << "Attendance logs populated successfully.\n";
 }
 
-double getAttendancePct(const string& roll, const string& courseCode) {
+double getAttendancePct(const string& roll, const string& courseCode, const string& semester) {
     vector<vector<string>> data = readTXT("attendance_log.txt");
-    int total = 0, present = 0, late = 0;
-    for (int i = 0; i < data.size(); i++) {
-        if (data[i][0] == roll && data[i][1] == courseCode) {
+    int total = 0;
+    double presentWeight = 0.0;
+
+    for (size_t i = 0; i < data.size(); i++) {
+        if (data[i][0] == roll && data[i][1] == courseCode && data[i][2] == semester) {
             total++;
-            if (data[i][3] == "P") present++;
-            else if (data[i][3] == "L") late++;
+            if (data[i][4] == "P") {
+                presentWeight += 1.0;
+            } else if (data[i][4] == "L") {
+                presentWeight += 0.5;
+            }
         }
     }
     if (total == 0) return 0.0;
-    return (present + 0.5 * late) / total * 100.0;
+    return (presentWeight / total) * 100.0;
 }
 
-vector<vector<string>> getShortageList(const string& courseCode) {
-    vector<vector<string>> enrolled = listEnrolledStudents(courseCode);
+vector<vector<string>> getShortageList(const string& courseCode, const string& semester) {
+    vector<vector<string>> enrolled = listEnrolledStudents(courseCode, semester);
     vector<vector<string>> shortage;
-    for (int i = 0; i < enrolled.size(); i++) {
+
+    for (size_t i = 0; i < enrolled.size(); i++) {
         string roll = enrolled[i][0];
-        double pct = getAttendancePct(roll, courseCode);
+        double pct = getAttendancePct(roll, courseCode, semester);
         if (pct < 75.0) {
-            vector<string> entry = {roll, courseCode, to_string(pct)};
+            vector<string> entry = {roll, enrolled[i][1], to_string(pct)};
             shortage.push_back(entry);
         }
     }
     return shortage;
 }
 
-bool undoLastSession(const string& courseCode) {
-    if (attendanceBackup.empty()) return false;
-    vector<string> header = {"roll", "course_code", "date", "status"};
-    writeTXT("attendance_log.txt", header, attendanceBackup);
-    cout << "Last session undone successfully.\n";
+bool undoLastSession(const string& courseCode, const string& semester, const string& date) {
+    vector<vector<string>> data = readTXT("attendance_log.txt");
+    vector<vector<string>> remainingData;
+    bool found = false;
+
+    for (size_t i = 0; i < data.size(); i++) {
+        if (data[i][1] == courseCode && data[i][2] == semester && data[i][3] == date) {
+            found = true;
+        } else {
+            remainingData.push_back(data[i]);
+        }
+    }
+
+    if (!found) {
+        return false;
+    }
+
+    vector<string> header = {"roll", "course_code", "semester", "date", "status"};
+    writeTXT("attendance_log.txt", header, remainingData);
     return true;
 }
 
-void printDailySheet(const string& courseCode, const string& date) {
+void printDailySheet(const string& courseCode, const string& semester, const string& date) {
     vector<vector<string>> data = readTXT("attendance_log.txt");
     cout << "\n--- Daily Attendance Sheet ---\n";
-    cout << "Course: " << courseCode << " | Date: " << date << "\n";
-    cout << "Roll\t\tStatus\n";
+    cout << "Course: " << courseCode << " | Sem: " << semester << " | Date: " << date << "\n";
+    cout << "Roll No\t\tStatus\n";
     cout << "------------------------\n";
-    for (int i = 0; i < data.size(); i++) {
-        if (data[i][1] == courseCode && data[i][2] == date) {
-            cout << data[i][0] << "\t\t" << data[i][3] << "\n";
+    
+    bool recordFound = false;
+    for (size_t i = 0; i < data.size(); i++) {
+        if (data[i][1] == courseCode && data[i][2] == semester && data[i][3] == date) {
+            cout << data[i][0] << "\t\t" << data[i][4] << "\n";
+            recordFound = true;
         }
+    }
+    if (!recordFound) {
+        cout << "No logs found matching parameters.\n";
     }
 }

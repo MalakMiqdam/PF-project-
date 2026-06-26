@@ -9,10 +9,10 @@
 
 using namespace std;
 
-void markAttendance(const string& courseCode, const string& date);
-double getAttendancePct(const string& roll, const string& courseCode);
-vector<vector<string>> getShortageList(const string& courseCode);
-bool undoLastSession(const string& courseCode);
-void printDailySheet(const string& courseCode, const string& date);
+void markAttendance(const string& courseCode, const string& semester, const string& date);
+double getAttendancePct(const string& roll, const string& courseCode, const string& semester);
+vector<vector<string>> getShortageList(const string& courseCode, const string& semester);
+bool undoLastSession(const string& courseCode, const string& semester, const string& date);
+void printDailySheet(const string& courseCode, const string& semester, const string& date);
 
 #endif
